@@ -1,0 +1,137 @@
+services:
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    hostname: influxdb
+    networks:
+      - chronos
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=${DB_NAME}
+      - INFLUXDB_ADMIN_USER=${ADMIN_USER}
+      - INFLUXDB_ADMIN_PASSWORD=${ADMIN_PW}
+    volumes:
+      - '$PWD/data/influxdb:/config'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    hostname: grafana
+    networks:
+      - chronos
+    ports:
+      - "3000:3000"
+    volumes:
+      - '$PWD/data/grafana:/config'
+    depends_on:
+      - influxdb
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    hostname: prometheus
+    networks:
+      - chronos
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - '$PWD/data/prometheus:/etc/prometheus'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    restart: unless-stopped
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    hostname: pushgw
+    networks:
+      - chronos
+    ports:
+      - "127.0.0.1:9091:9091"
+    volumes:
+      - '$PWD/data/pushgateway:/etc/pushgateway'
+
+
+    - name: Create pushgateway service account
+      user:
+        name: pushgateway
+        system: true
+        shell: /usr/sbin/nologin
+        comment: "Service account for pushgateway"
+
+    - name: Copy pushgateway.sh to /usr/local/bin
+      copy:
+        src: pushgateway.sh
+        dest: /usr/local/bin/pushgateway.sh
+        owner: pushgateway
+        group: pushgateway
+        mode: '0755'
+
+    - name: Copy pushgateway.service to /etc/systemd/system
+      copy:
+        src: pushgateway.service
+        dest: /etc/systemd/system/pushgateway.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy pushgateway.timer to /etc/systemd/system
+      copy:
+        src: pushgateway.timer
+        dest: /etc/systemd/system/pushgateway.timer
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+
+    - name: Enable and start pushgateway service
+      systemd:
+        name: pushgateway.service
+        enabled: true
+        state: started
+      register: service_status
+      failed_when: service_status.status is not defined or service_status.status != 0
+
+    - name: Enable and start pushgateway timer
+      systemd:
+        name: pushgateway.timer
+        enabled: true
+        state: started
+      register: timer_status
+      failed_when: timer_status.status is not defined or timer_status.status != 0
+
+    - name: Check if pushgateway.service is running
+      systemd:
+        name: pushgateway.service
+        state: started
+      register: check_status
+
+    - name: Handle service failure
+      block:
+        - name: Disable pushgateway service
+          systemd:
+            name: pushgateway.service
+            enabled: false
+            state: stopped
+
+        - name: Disable pushgateway timer
+          systemd:
+            name: pushgateway.timer
+            enabled: false
+            state: stopped
+
+        - name: Reload systemd daemon after disabling
+          command: systemctl daemon-reload
+
+        - name: Fail the playbook
+          fail:
+            msg: "The pushgateway service encountered errors and has been disabled to prevent affecting other servers."
+      when: check_status.status != 0
+networks:
+  chronos:
+    driver: bridge

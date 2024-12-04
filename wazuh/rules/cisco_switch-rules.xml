@@ -1,0 +1,12 @@
+<!--
+  -  Cisco AAA rules
+  -  Author: Josh Burgess.
+  -  This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2.
+-->
+
+<group name="syslog,cisco_aaa">
+	<rule id="100001" level="3">
+    	<decoded_as>cisco-aaa</decoded_as>
+        <description>Cisco AAA Informational Message</description>
+	</rule>
+</group>

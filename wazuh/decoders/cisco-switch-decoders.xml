@@ -1,0 +1,45 @@
+<!-- Local Decoders -->
+
+<!-- Modify it at your will. -->
+<!-- Copyright (C) 2015, Wazuh Inc. -->
+
+<!--
+  - Allowed static fields:
+  - location   - where the log came from (only on FTS)
+  - srcuser    - extracts the source username
+  - dstuser    - extracts the destination (target) username
+  - user       - an alias to dstuser (only one of the two can be used)
+  - srcip      - source ip
+  - dstip      - dst ip
+  - srcport    - source port
+  - dstport    - destination port
+  - protocol   - protocol
+  - id         - event id
+  - url        - url of the event
+  - action     - event action (deny, drop, accept, etc)
+  - status     - event status (success, failure, etc)
+  - extra_data - Any extra data
+-->
+
+<!--
+    - Author: Josh
+    - Decoders for Cisco AAA (Authentication, Authorization, and Accounting)
+    - Used predominantly for Cisco SG300-52, however there may be some crossover for other versions.
+    - This program is a free software; you can redistribute it and/or modify it under the terms of GPLv2.
+-->
+
+<decoder name="cisco-aaa">
+    <prematch>^%AAA-</prematch>
+</decoder>
+
+<!--
+    %AAA-I-CONNECT: New https connection for user admin, source 10.20.10.1 destination 10.20.2.1 ACCEPTED
+    %AAA-I-DISCONNECT: https connection for user admin, source 10.20.10.12 destination 10.20.2.1 TERMINATED
+-->
+
+<decoder name="cisco-aaa-dynamic-auth">
+    <parent>cisco-aaa</parent>
+    <prematch offset="after_parent">I-CONNECT|I-DISCONNECT</prematch>
+    <regex offset="after_parent">:(New\s)?https? connection for user (\w+), source (\d+.\d+.\d+.\d+) destination (\d+.\d+.\d+.\d+) (\w+)</regex>
+   <order>id, description</order>
+</decoder>
