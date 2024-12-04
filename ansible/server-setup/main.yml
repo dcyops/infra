@@ -1,0 +1,33 @@
+---
+
+- hosts: belial
+  vars_files:
+    - vars/vault/belial.yml
+  roles:
+    - one
+    - three
+    - ansible-msmtp-mailer
+
+- hosts: leviathan
+  vars_files:
+    - vars/vault/leviathan.yml
+  roles:
+    - one
+    - three
+    - ansible-msmtp-mailer
+
+- hosts: beelzebub
+  vars_files:
+    - vars/vault/beelzebub.yml
+  roles:
+    - one
+    - three
+    - ansible-msmtp-mailer
+
+- hosts: mephistopheles
+  vars_files:
+    - vars/vault/mephistopheles.yml
+  roles:
+    - one
+    - three
+    - ansible-msmtp-mailer

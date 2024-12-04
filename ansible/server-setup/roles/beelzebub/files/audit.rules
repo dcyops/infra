@@ -1,0 +1,14 @@
+# Log all commands executed by root
+-a always,exit -F arch=b64 -S execve -C uid=0 -k root_shell
+-a always,exit -F arch=b32 -S execve -C uid=0 -k root_shell
+
+# Log all commands executed by users
+-a always,exit -F arch=b64 -S execve
+-a always,exit -F arch=b32 -S execve
+
+# Do not log commands executed by the users listed below via their UID
+# -a always,exit -F arch=b64 -S execve -F auid!=USER_ID_GOES_HERE
+# -a always,exit -F arch=b32 -S execve -F auid!=USER_ID_GOES_HERE
+
+# Log sudo activity
+auditctl -a always,exit -F path=/usr/bin/sudo -F perm=x -k sudo_activity

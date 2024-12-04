@@ -1,0 +1,49 @@
+---
+# Path: roles/commmon/tasks/accessbility-settings.yml
+
+- name: Set the hostname and update the hosts file
+  block:
+    - name: Set the hostname
+      ansible.builtin.hostname:
+        name: "{{ ansible_hostname }}"
+
+    - name: Set hosts file
+      template:
+        src: hosts.j2
+        dest: /etc/hosts
+        owner: root
+        group: root
+        mode: 0644
+  tags:
+     - set-hostname
+
+- name: Configure system locale and keyboard layout
+  block:
+    - name: Configure system locale
+      ansible.builtin.command:
+        cmd: localectl set-locale {{ locale }}
+      changed_when: false
+
+    - name: Configure console keyboard layout
+      ansible.builtin.command:
+        cmd: localectl set-keymap --no-convert {{ console_keymap }}
+      changed_when: false
+
+    - name: Get list of installed packages
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Configure X11 keyboard layout
+      ansible.builtin.command:
+      cmd: >
+        localectl set-x11-keymap --no-convert
+        {{ x11_keymap_layout }} {{ x11_keymap_model }}
+        {{ x11_keymap_variant }} {{ x11_keymap_option }}
+      changed_when: false
+      when: "'libxkbcommon' in ansible_facts.packages"
+  tags:
+    - locale-kblayout
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"

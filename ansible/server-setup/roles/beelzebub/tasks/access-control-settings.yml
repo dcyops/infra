@@ -1,0 +1,100 @@
+---
+# Path: roles/common/tasks/access-control-settings.yml
+
+# SSH
+- name: Generate sshd defaults configuration file
+  ansible.builtin.template:
+    src: Defaults.j2
+    dest: /etc/ssh/sshd_config.d/Defaults.conf
+    owner: root
+    group: root
+    mode: "0640"
+  notify: restart systemd ssh service
+  tags:
+    - gen-ssh-conf
+
+# Sudoers
+- name: Configure necessary sudo access
+  block:
+    - name: Generate sudo defaults configuration file
+      ansible.builtin.template:
+        src: sudoDefaults.j2
+        dest: /etc/sudoers.d/Defaults
+        owner: root
+        group: root
+        mode: "0440"
+      notify:
+        - validate sudo configuration
+
+    - name: Configure sudoers to enable users to execute commands
+      community.general.sudoers:
+        become: true
+        user: "{{ user }}"
+        nopassword: true
+        commands:
+          - "ALL"
+          - "!PASSWD"
+          - "!SU"
+
+    - name: Insert conf sudoers
+      ansible.builtin.lineinfile:
+        become: true
+        path: /etc/sudoers
+        line: "{{ item }}"
+        validate: /usr/sbin/visudo -cf %s
+      with_items:
+        - "cmd_alias PASSWD=/usr/bin/passwd"
+        - "cmd_alias SU=/bin/su"
+
+    - name: Configure restricted program access with security controls
+      community.general.sudoers:
+        name: restricted-program-access
+        user: "{{ restricted_user }}"
+        commands:
+          - /usr/bin/less
+          - /usr/bin/vim
+          - /usr/bin/vi
+          - /usr/bin/more
+          - /usr/bin/man
+          - /usr/bin/python3
+          - /usr/bin/perl
+          - /usr/bin/gdb
+        defaults:
+          - noexec
+          - env_reset
+          - !env_editor
+          - !env_keep
+          - secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+        state: present
+        validation: required
+
+    - name: Set restrictive permissions on sensitive directories
+      file:
+        path: "{{ item }}"
+        mode: "0755"
+        owner: root
+        group: root
+      loop:
+        - /usr/bin
+        - /usr/local/bin
+        - /usr/sbin
+
+    - name: Configure environment security settings
+      lineinfile:
+        path: /etc/security/limits.conf
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "* hard core 0"
+        - "* soft nproc 100"
+        - "* hard maxlogins 3"
+
+    - name: Configure system-wide security settings
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+      loop:
+        - { name: "kernel.yama.ptrace_scope", value: "1" }
+        - { name: "kernel.core_pattern", value: "|/bin/false" }
+        - { name: "fs.suid_dumpable", value: "0" }
