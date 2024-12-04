@@ -1,3 +1,4 @@
 old/
 vars/vault
 vars/main.yml
+.gitignore
