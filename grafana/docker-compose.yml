@@ -1,6 +1,8 @@
 services:
   influxdb:
     image: influxdb:latest
+    restart: unless-stopped
+
     container_name: influxdb
     hostname: influxdb
     networks:
@@ -13,7 +15,6 @@ services:
       - INFLUXDB_ADMIN_PASSWORD=${ADMIN_PW}
     volumes:
       - '$PWD/data/influxdb:/config'
-    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:latest

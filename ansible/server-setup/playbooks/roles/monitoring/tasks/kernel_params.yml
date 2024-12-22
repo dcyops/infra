@@ -1,0 +1,15 @@
+---
+# path: roles/monitoring/tasks/kernel_params.yml
+
+  - name: Tune the kernel
+    ansible.builtin.sysctl:
+      name: "{{ item.key }}"
+      value: "{{ item.value }}"
+      state: present
+      sysctl_set: true
+      reload: true
+      with_items:
+        - { key: "kernel.pid_max", value: "35768" }           # Maximum number of process IDs
+        - { key: "kernel.shmmax", value: "268435456" }        # Maximum shared memory segment size
+        - { key: "vm.swappiness", value: "10" }               # Minimize swapping to disk
+        - { key: "vm.dirty_background_ratio", value: "5" }    # Percentage of system memory for background writeback

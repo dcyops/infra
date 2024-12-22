@@ -1,0 +1,4 @@
+---
+# path: inventories/group_vars_vars.yml
+
+audit_build_options: '--with-libcap-ng=yes --without-golang --without-python3 --with-io_uring --disable-zos-remote --sbindir=/usr/local/sbin'

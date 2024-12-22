@@ -1,5 +1,0 @@
----
-# Path: roles/access-control/tasks/main.yml
-
-- import_tasks: access-control-settings.yml
-- import_tasks: accessbility-settings.yml

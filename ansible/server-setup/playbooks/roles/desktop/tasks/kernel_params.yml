@@ -1,0 +1,14 @@
+---
+
+  - name: Tune the kernel
+    ansible.builtin.sysctl:
+      name: "{{ item.key }}"
+      value: "{{ item.value }}"
+      state: present
+      sysctl_set: true
+      reload: true
+      with_items:
+        - { key: "kernel.pid_max", value: "65536" }                              # Maximum number of process IDs
+        - { key: "kernel.shmmax", value: "34359738368" }                         # Maximum shared memory segment size
+        - { key: "vm.swappiness", value: "0" }                                   # Minimize swapping to disk
+        - { key: "vm.dirty_background_ratio", value: "5" }                       # Percentage of system memory for background writeback

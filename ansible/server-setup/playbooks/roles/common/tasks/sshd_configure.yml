@@ -1,0 +1,11 @@
+---
+# roles/common/tasks/sshd_configure.yml
+
+- name: Configure SSH hardening defaults
+  ansible.builtin.template:
+    src: sshd_defaults.j2
+    dest: /etc/ssh/sshd_config.d/01-improved-defaults.conf
+    owner: root
+    group: root
+    mode: '0640'
+  notify: 'Restart systemd {{ service_name }} service'

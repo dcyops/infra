@@ -1,0 +1,11 @@
+---
+# path: playbooks/mephisto.yml
+
+- hosts: mephisto
+  become: true
+  vars_files:
+    - ../inventories/mephisto/host_vars/vars.yml
+    - ../inventories/group_vars/main.yml
+  roles:
+    - common
+    - monitoring

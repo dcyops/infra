@@ -1,142 +1,183 @@
+---
+
+networks:
+  nginx-proxy:
+    external: true
+
+x-logging: &default-logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+#-----------JELLYFIN--------------#
 services:
   jellyfin:
     image: jellyfin/jellyfin
+    restart: unless-stopped 
+
     container_name: jellyfin
     hostname: jellyfin
-    group_add:
-      - "993" # Render
-      - "44"  # Video
-    restart: no
+
     volumes:
-      - /mnt/hgst/docker/jellyfin/etc:/etc/jellyfin
-      - /mnt/hgst/docker/jellyfin/var-lib:/var/lib/jellyfin
-      - /mnt/hgst/docker/jellyfin/var-log:/var/log/jellyfin
-      - /mnt/hgst/media:/media
-      - /dev/shm:/var/cache/jellyfin:rw
+      - ${JELLYFIN_DATA}:/data
+      - ${JELLYFIN_CONFIG}:/config
+      - ${JELLYFIN_MEDIA}:/media
+
+      - /dev/shm:/cache/jellyfin:rw
+    env_file:
+      - .env
     environment:
-      - TZ=Europe/London
-      - PUID=1000
-      - PGID=1000
       - JELLYFIN_CACHE_DIR=/var/cache/jellyfin
       - JELLYFIN_CONFIG_DIR=/etc/jellyfin
       - JELLYFIN_DATA_DIR=/var/lib/jellyfin
       - JELLYFIN_LOG_DIR=/var/log/jellyfin
-#    networks:
-#      proxy:
-#        aliases:
-#          - jellyfin
-    ports:
-      - "8096:8096"
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
       - /dev/dri/card1:/dev/dri/card0
+    expose:
+      - "8096:8096"
+    networks:
+      nginx-proxy:
+        aliases:
+          - jellyfin
+#---------------------------------#
 
+#--------------BAZARR-------------#
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
+    restart: no
+
     container_name: bazarr
     hostname: bazarr
-    restart: no
+
     volumes:
-      - /mnt/hgst/docker/bazarr:/config
-    environment:
-      - TZ=Europe/London
-      - PUID=1000
-      - PGID=1000
+      - ${BAZARR_DATA}:/data
+      - ${BAZARR_CONFIG}:/config
+    env_file:
+      - .env
     depends_on:
       - sonarr
       - radarr
+    expose: 
+      - "6767:6767" 
     networks:
-      proxy:
+      nginx-proxy:
         aliases:
           - bazarr
 
-  jellyseerr:
-    image: fallenbagel/jellyseerr:latest
-    container_name: jellyseerr
-    hostname: jellyseerr
-    restart: no
-    volumes:
-      - /mnt/hgst/docker/jellyseerr:/app/config
-    environment:
-      - TZ=Europe/London
-    depends_on:
-      - sonarr
-      - radarr
-    networks:
-      proxy:
-        aliases:
-          - jellyseerr
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+#---------------------------------#
 
+#-------------PROWLARR------------#
   prowlarr:
     image: linuxserver/prowlarr:latest
+    restart: no
+
     container_name: prowlarr
     hostname: prowlarr
-    restart: no
+
     volumes:
-      - /mnt/hgst/docker/prowlarr:/config
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - ${PROWLARR_DATA}:/data
+      - ${PROWLARR_CONFIG}:/config
+    env_file:
+      - .env
     depends_on:
       - flaresolverr
+    expose:
+      - "8096:8096"
     networks:
-      proxy:
+      nginx-proxy:
         aliases:
           - prowlarr
 
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+#---------------------------------#
+
+#----------FLARESOLVERR-----------#
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: no
+
     container_name: flaresolverr
     hostname: flaresolverr
-    restart: no
+
+    volumes:
+      - ${FLARESOLVERR_DATA}:/data
+      - ${FLARESOLVERR_CONFIG}:/config
+    env_file:
+      - .env
     environment:
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_HTML=${LOG_HTML:-false}
       - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+    expose:
+      - "9696:9696"
     networks:
-      proxy:
+      nginx-proxy:
         aliases:
           - flaresolverr
 
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+#---------------------------------#
+
+#--------------RADARR-------------#
   radarr:
     image: lscr.io/linuxserver/radarr:latest
+    restart: no
+
     container_name: radarr
     hostname: radarr
-    restart: no
+
     volumes:
-      - /mnt/hgst/docker/radarr:/config
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - ${RADARR_DATA}:/data
+      - ${RADARR_CONFIG}:/config
+    env_file:
+      - .env
     depends_on:
       - prowlarr
       - jellyfin
+    expose:
+      - "7878:7878"
     networks:
-      proxy:
+      nginx-proxy:
         aliases:
           - radarr
 
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+#---------------------------------#
+
+#--------------SONARR-------------#
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
+    restart: no
+
     container_name: sonarr
     hostname: sonarr
-    restart: no
+
     volumes:
-      - /mnt/hgst/docker/sonarr:/config
-    environment:
-      - TZ=Europe/London
+      - ${SONARR_DATA}:/data
+      - ${SONARR_CONFIG}:/config
+    env_file:
+      - .env
     depends_on:
       - prowlarr
       - jellyfin
+    expose:
+      - "8989:8989"
     networks:
-      proxy:
+      nginx-proxy:
         aliases:
           - sonarr
-networks:
-  proxy:
-    external: true
+
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 1.0
+#---------------------------------#

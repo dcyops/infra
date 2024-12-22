@@ -1,0 +1,12 @@
+ansible_host: 192.168.1.196 
+ansible_connection: remote
+ansible_user: user
+
+target_user: "user"
+
+########################
+# Docker compose 
+########################
+compose:
+  version: "2.32.1"
+  checksum: "sha256:7aa6406406be13c075e92cfbf322470318a9ad7a58c93a9fb3a215dc14aed8bd"

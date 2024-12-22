@@ -1,0 +1,7 @@
+---
+# Path: roles/common/tasks/main.yml
+
+- import_tasks: auditd_setup.yml 
+- import_tasks: locale_setup.yml
+- import_tasks: network_params.yml
+- import_tasks: sshd_configure.yml 

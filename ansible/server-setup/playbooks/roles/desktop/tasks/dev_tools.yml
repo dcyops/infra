@@ -1,0 +1,98 @@
+---
+- name: Get list of installed packages
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+    #   - automake
+    #   - autoconf
+    #   - libtool
+    #   - libcap-ng-dev
+    #   - libcap-ng-utils
+    #   - make
+    #   - gcc
+    state: present
+    update_cache: true
+
+  ########################
+  # Go setup
+  ########################
+- block:
+    - name: Verify executing user
+      ansible.builtin.command: whoami
+      register: executing_user
+      become: true
+      become_user: "{{ target_user }}"
+
+    - name: Check if running as non-root user
+      ansible.builtin.fail:
+        msg: "Task is running as root, expected non-root user"
+      when: executing_user.stdout == 'root'
+      any_errors_fatal: true
+
+    - name: Create Go directories
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.local/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "bin"
+        - "src/go"
+        - "share/go"
+
+    - name: Configure Go environment
+      ansible.builtin.blockinfile:
+        path: "/home/{{ target_user }}/.zshrc.local"
+        block: |
+          export "GOROOT={{ go.root_dir }}"
+          export "GOPATH={{ go.path_dir }}"
+          export "PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin"
+        create: true
+
+    - name: Unarchive a file that needs to be downloaded (added in 2.0)
+      ansible.builtin.unarchive:
+        src: "{{ go.url }}"
+        dest: "{{ go.root_dir }}"
+        remote_src: true
+        extra_opts:
+          - --strip-components=1
+  become: true
+  become_user: "{{ target_user }}"
+
+  ########################
+  # Go binaries
+  ########################
+- block:
+    - name: Verify executing user
+      ansible.builtin.command: whoami
+      register: executing_user
+      become: true
+      become_user: "{{ target_user }}"
+
+    - name: Check if running as non-root user
+      ansible.builtin.fail:
+        msg: "Task is running as root, expected non-root user"
+      when: executing_user.stdout == 'root'
+      any_errors_fatal: true
+
+    - name: "Installing yamlfmt"
+      ansible.builtin.command: "go install github.com/google/yamlfmt/cmd/yamlfmt@latest"
+      args:
+        chdir: "/home/{{ target_user }}/.local/src/go/bin"
+  become: true
+  become_user: "{{ target_user }}"
+
+- block:
+    - name: Verify executing user
+      ansible.builtin.command: whoami
+      register: executing_user
+      become: true
+      become_user: "{{ target_user }}"
+
+    - name: Check if running as non-root user
+      ansible.builtin.fail:
+        msg: "Task is running as root, expected non-root user"
+      when: executing_user.stdout == 'root'
+      any_errors_fatal: true

@@ -1,0 +1,7 @@
+---
+# path: roles/monitoring/tasks/main.yml
+
+- import_task: docker_setup.yml
+  #- import_task: compose_dplyment.yml
+- import_task: kernel_params.yml
+- import_task: sudo_configure.yml

@@ -1,0 +1,10 @@
+---
+
+- hosts: beelzebub
+  become: true
+  vars_files:
+    - ../inventories/beelzebub/host_vars/vars.yml
+    - ../inventories/group_vars/main.yml
+  roles:
+    - common
+    - desktop

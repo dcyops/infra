@@ -1,0 +1,13 @@
+ansible_host: 127.0.0.1
+ansible_connection: local
+ansible_user: user
+
+target_user: "user"
+
+########################
+# ~ dev_tools.yml
+########################
+go:
+  root_dir: "/home/{{ target_user }}/.local/src/go"
+  path_dir: "/home/{{ target_user }}/.local/share/go"
+  url: "https://go.dev/dl/go1.23.4.linux-amd64.tar.gz"
