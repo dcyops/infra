@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+hostname=$(hostname)
+readonly hostname
+
+ps aux | awk -v host="${hostname}" '
+    NR>1 { # Skip header line
+        printf "cpu_usage{process=\"%s\", pid=\"%s\", hostname=\"%s\"} %s\n",
+            $11,    # process name
+            $2,     # pid
+            host,   # hostname
+            $3      # cpu usage
+    }
+' | curl -X POST \
+    -H "Content-Type: text/plain" \
+    --data-binary @- \
+    "http://:9091/metrics/job/top/instance/${hostname}"

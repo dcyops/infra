@@ -1,0 +1,114 @@
+- hosts: servers
+  remote_user: 
+  become: true
+  become_method: sudo
+  gather_facts: true
+  vars:
+    user_home: ""
+    venv_base: "{{ user_home }}/.venv"
+    venv_path: "{{ venv_base }}/docker"
+  environment:
+    HOME: ""
+    USER: ""
+    LOGNAME: ""
+  vars_files:
+    - ../vars/main.yml
+
+  tasks:
+    - name: Install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+          - python3-venv
+        state: latest
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker CE
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: latest
+        update_cache: yes
+
+    - name: Create virtual environment base directory
+      file:
+        path: "{{ venv_base }}"
+        state: directory
+        mode: '0755'
+        owner: 
+        group: 
+      become: true
+
+    - name: Set proper ownership of venv directory
+      file:
+        path: "{{ venv_base }}"
+        state: directory
+        recurse: yes
+        owner: 
+        group: 
+      become: true
+
+    - name: Create Python virtual environment
+      shell: |
+        python3 -m venv {{ venv_path }}
+      args:
+        creates: "{{ venv_path }}/bin/activate"
+      become: true
+      become_user: 
+      environment:
+        HOME: ""
+        USER: ""
+        LOGNAME: ""
+
+    - name: Install Docker Python module in virtual environment
+      pip:
+        name: docker
+        state: present
+        virtualenv: "{{ venv_path }}"
+        virtualenv_command: python3 -m venv
+      become: true
+      become_user: 
+      environment:
+        HOME: ""
+        USER: ""
+        LOGNAME: ""
+
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Add user to docker group
+      user:
+        name: 
+        groups: docker
+        append: yes
+
+    - name: Create .bashrc snippet for virtual environment
+      blockinfile:
+        path: "{{ user_home }}/.bashrc"
+        block: |
+          # Docker virtual environment
+          if [ -f {{ venv_path }}/bin/activate ]; then
+              source {{ venv_path }}/bin/activate
+          fi
+        marker: "# {mark} DOCKER VIRTUAL ENVIRONMENT"
+      become: true
+      become_user: 
