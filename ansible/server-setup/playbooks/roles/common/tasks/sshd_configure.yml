@@ -1,11 +1,21 @@
 ---
-# roles/common/tasks/sshd_configure.yml
+# path: roles/common/tasks/sshd_configure.yml
+
+- name: 'Check if /etc/ssh/sshd_config.d/01-improved-defaults.conf already exists' 
+  ansible.builtin.stat:
+    path: '/etc/sysctl.d/10-kernel-params.conf'
+  register: sshd_file
+  changed_when: false
 
 - name: Configure SSH hardening defaults
   ansible.builtin.template:
-    src: sshd_defaults.j2
-    dest: /etc/ssh/sshd_config.d/01-improved-defaults.conf
+    src: 'sshd_defaults.j2'
+    dest: '/etc/ssh/sshd_config.d/01-improved-defaults.conf'
     owner: root
     group: root
     mode: '0640'
-  notify: 'Restart systemd {{ service_name }} service'
+  notify: restart systemd service
+  vars:
+    service_name: sshd
+  when: not sshd_file.stat.exists
+

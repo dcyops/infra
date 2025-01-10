@@ -1,0 +1,34 @@
+---
+# path: roles/commmon/tasks/locale_setup.yml
+
+- name: Configure system locale and keyboard layout
+  block:
+    - name: Configure system locale
+      ansible.builtin.command:
+        cmd: 'localectl set-locale {{ system_locale.locale }}'
+
+    - name: Configure console keyboard layout
+      ansible.builtin.command:
+        cmd: 'localectl set-keymap --no-convert {{ system_locale.console_keymap }}'
+
+    - name: Get list of installed packages
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Configure X11 keyboard layout
+      ansible.builtin.command:
+        argv:
+          - 'localectl'
+          - 'set-x11-keymap'
+          - '--no-convert'
+          - '{{ X11_keymap.layout }}'
+          - '{{ X11_keymap.model }}'
+          - '{{ X11_keymap.variant }}'
+            #- '{{ X11_keymap_option }}'
+      when: 'libxkbcommon in ansible_facts.packages'
+  tags:
+    - locale-kblayout
+
+- name: Set timezone
+  community.general.timezone:
+    name: '{{ timezone }}'

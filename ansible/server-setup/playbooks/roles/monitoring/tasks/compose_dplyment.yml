@@ -1,0 +1,58 @@
+---
+# path: roles/monitoring/tasks/compose_dplyment.yml
+
+block:
+  - name: Clone srv-configs
+    git:
+      repo: ssh://git@gogs.app.thefij:3022/IamTheFij/srv-configs.git
+      dest: './files/srv-configs'
+      recursive: yes
+      accept_hostkey: yes
+    delegate_to: localhost
+    run_once: true
+
+  - name: Archive configs
+    archive:
+      path: './files/srv-configs/{{ ansible_hostname }}/'
+      dest: './files/srv-configs-{{ ansible_hostname }}.tar.gz'
+    delegate_to: localhost
+
+  - name: Update Services | Copy srv-configs to remote host
+    unarchive:
+      src: './files/srv-configs-{{ ansible_hostname }}.tar.gz'
+      dest: '{{ service_root }}/configs'
+
+  - name: Copy compose all
+    copy:
+      src: './files/srv-configs/compose-all.sh'
+      dest: '{{ service_root }}/'
+      mode: '+x'
+
+  - name: Clone srv-configs-private
+    git:
+      repo: ssh://git@gogs.app.thefij:3022/IamTheFij/srv-configs-private.git
+      dest: './files/srv-configs-private'
+      recursive: yes
+      accept_hostkey: yes
+    delegate_to: localhost
+    run_once: true
+
+  - name: Copy srv-configs-private to remote host
+    copy:
+      src: './files/srv-configs-private/{{ ansible_hostname }}/'
+      dest: '{{ service_root }}/configs'
+      decrypt: yes
+
+  - name: Compose All (pull, build, up)
+    command: "{{ service_root }}/compose-all.sh {{ item }}"
+    environment:
+      # Docker path for QNAP
+      PATH: '/share/CACHEDEV1_DATA/.qpkg/container-station/bin:{{ ansible_env.PATH }}'
+    args:
+      chdir: '{{ service_root }}'
+    with_items:
+      - "pull"
+      - "build --pull"
+      - "up -d"
+
+

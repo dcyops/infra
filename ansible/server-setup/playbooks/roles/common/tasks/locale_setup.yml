@@ -1,33 +1,28 @@
 ---
-# Path: roles/commmon/tasks/locale_setup.yml
+# path: roles/commmon/tasks/locale_setup.yml
 
 - name: Configure system locale and keyboard layout
   block:
+      # TODO: Add a condition and handler to check keymap
+      # integrity and compatibility before loading.
+    - name: Extract keyboard mappings
+      ansible.builtin.unarchive:
+        src: '{{ kbd_url }}'
+        dest: '/usr/share'
+        remote_src: true
+        extra_opts:
+          - '--strip-components=2'
+          - 'kbd-2.5.1/data/keymaps'
+        mode: '0755'
+
     - name: Configure system locale
       ansible.builtin.command:
-        cmd: localectl set-locale {{ locale }}
-      changed_when: false
+        cmd: 'localectl set-locale {{ system_locale.locale }}'
 
     - name: Configure console keyboard layout
       ansible.builtin.command:
-        cmd: localectl set-keymap --no-convert {{ console_keymap }}
-      changed_when: false
-
-    - name: Get list of installed packages
-      ansible.builtin.package_facts:
-        manager: auto
-
-    - name: Configure X11 keyboard layout
-      ansible.builtin.command:
-      cmd: >
-        localectl set-x11-keymap --no-convert
-        {{ x11_keymap_layout }} {{ x11_keymap_model }}
-        {{ x11_keymap_variant }} {{ x11_keymap_option }}
-      changed_when: false
-      when: "'libxkbcommon' in ansible_facts.packages"
-  tags:
-    - locale-kblayout
+        cmd: 'localectl set-keymap --no-convert {{ system_locale.console_keymap }}'
 
 - name: Set timezone
   community.general.timezone:
-    name: "{{ timezone }}"
+    name: '{{ timezone }}'

@@ -1,20 +1,30 @@
 ---
+# path: roles/monitoring/tasks/sudo_configure.yml
 
-- name: Set specific sudo command privileges for {{ ansible_user }}
-  community.general.sudoers:
-    user: {{ ansible_user }}
-    nopassword: true
-    commands:
-      - 'ALL'
-      - '!PASSWD'
-      - '!SU'
+- name: 'Check if /etc/sudoers.d/01-command-aliases already exists'
+  ansible.builtin.stat:
+    path: '/etc/sudoers.d/01-command-aliases'
+  register: stat_result
+  changed_when: false
 
-- name: Configure passwd and su command aliases
-  ansible.builtin.lineinfile:
-    path: /etc/sudoers.d/01-command-aliases
-    line: '{{ item }}'
-    validate: 'visudo -cf %s'
-    create: true
-  loop:
-    - cmd_alias PASSWD=/usr/bin/passwd
-    - cmd_alias SU=/bin/su
+- block:
+  - name: Configure passwd and su command aliases
+    ansible.builtin.lineinfile:
+      path: '/etc/sudoers.d/01-command-aliases'
+      line: '{{ item }}'
+      validate: 'visudo -cf %s'
+      create: true
+    loop:
+      - 'Cmnd_Alias PASSWD=/usr/bin/passwd'
+      - 'Cmnd_Alias SU=/bin/su'
+
+  - name: Set specific sudo command privileges for '{{ ansible_user }}'
+    community.general.sudoers:
+      name: '{{ ansible_user }}'
+      user: '{{ ansible_user }}'
+      nopassword: true
+      commands:
+        - 'ALL'
+        - '!PASSWD'
+        - '!SU'
+  when: not stat_result.stat.exists

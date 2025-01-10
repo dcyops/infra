@@ -1,88 +1,21 @@
 ---
-# roles/common/tasks/auditd_setup.yml
+# path: roles/common/tasks/auditd_setup.yml
 
-- name: Get list of installed packages
-  ansible.builtin.package_facts:
-    manager: auto
-
-- name: Install dependencies
+- name: Install auditd
   ansible.builtin.apt:
-    name:
-      - automake
-      - autoconf
-      - libtool
-      - libcap-ng-dev
-      - libcap-ng-utils
-      - make
-      - gcc
-    state: present
-    update_cache: true
+    name: auditd
+    update_cache: yes
 
-- name: Clone audit-userspace into /usr/local/src
-  ansible.builtin.git:
-    repo: 'https://github.com/linux-audit/audit-userspace.git'
-    dest: /usr/local/src/audit-userspace
-    version: origin/master
-    accept_hostkey: true
-
-- name: Fix ownership of /usr/local/src/audit-userspace
-  ansible.builtin.file:
-    path: /usr/local/src/audit-userspace
-    owner: '{{ ansible_user }}'
-    group: '{{ ansible_user }}'
-    recurse: true
-    state: directory
-
-- name: Verify executing user
-  ansible.builtin.command: whoami
-  register: executing_user
-  become: true
-  become_user: '{{ ansible_user }}'
-
-- name: Prevent further execution if the EUID is still root
-  ansible.builtin.fail:
-    msg: 'Task is running as root, expected non-root user'
-  when: executing_user.stdout == 'root'
-  any_errors_fatal: true
-
-- name: Run autogen for audit-userspace
-  ansible.builtin.command: /bin/sh /usr/local/src/audit-userspace/autogen.sh
-  args:
-    chdir: /usr/local/src/audit-userspace
-  become: true
-  become_user: '{{ executing_user.stdout }}'
-
-- name: Configure audit-userspace
-  ansible.builtin.command: "./configure {{ audit_build_options }}"
-  args:
-    chdir: "/usr/local/src/audit-userspace"
-  become: true
-  become_user: '{{ executing_user.stdout }}'
-
-- name: Make audit-userspace
-  ansible.builtin.command: make -j "{{ ansible_processor_vcpus }}"
-  args:
-    chdir: /usr/local/src/audit-userspace
-  become: true
-  become_user: '{{ executing_user.stdout }}'
-
-- name: Make install audit-userspace
-  ansible.builtin.command: make install
-  args:
-    chdir: /usr/local/src/audit-userspace
-
-- name: Ensure 'audit/rules.d' directories exist
-  ansible.builtin.file:
-    path: /etc/audit/rules.d
-    recurse: true
-    state: directory
-
-- name: Transfer relavent rules for "{{ ansible_hostname }}"
+- name: 'Transfer relavent rules for {{ ansible_hostname }}'
   ansible.builtin.copy:
     src: '{{ item }}'
-    dest: /etc/audit/rules.d
+    dest: '/etc/audit/rules.d'
     owner: root
     group: root
     mode: 0644
   with_fileglob:
-    - files/*.rules
+    - 'files/*.rules'
+
+- name: Reload audit rules
+  ansible.builtin.command: 'augenrules --load'
+  changed_when: false

@@ -1,8 +1,9 @@
 ---
+# path: roles/desktop/tasks/sudo_configure.yml
 
-- name: Set specific sudo command privileges for {{ ansible_user }}
+- name: 'Set specific sudo command privileges for {{ ansible_user }}'
   community.general.sudoers:
-    user: {{ ansible_user }}
+    user: '{{ ansible_user }}'
     nopassword: true
     commands:
       - 'ALL'
@@ -11,10 +12,10 @@
 
 - name: Configure passwd and su command aliases
   ansible.builtin.lineinfile:
-    path: /etc/sudoers.d/01-command-aliases
+    path: '/etc/sudoers.d/01-command-aliases'
     line: '{{ item }}'
     validate: 'visudo -cf %s'
     create: true
   loop:
-    - cmd_alias PASSWD=/usr/bin/passwd
-    - cmd_alias SU=/bin/su
+    - 'cmd_alias PASSWD=/usr/bin/passwd'
+    - 'cmd_alias SU=/bin/su'

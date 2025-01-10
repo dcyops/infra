@@ -1,15 +1,23 @@
 ---
 # path: roles/monitoring/tasks/kernel_params.yml
 
-  - name: Tune the kernel
-    ansible.builtin.sysctl:
-      name: "{{ item.key }}"
-      value: "{{ item.value }}"
-      state: present
-      sysctl_set: true
-      reload: true
-      with_items:
-        - { key: "kernel.pid_max", value: "35768" }           # Maximum number of process IDs
-        - { key: "kernel.shmmax", value: "268435456" }        # Maximum shared memory segment size
-        - { key: "vm.swappiness", value: "10" }               # Minimize swapping to disk
-        - { key: "vm.dirty_background_ratio", value: "5" }    # Percentage of system memory for background writeback
+- name: 'Check if 10-kernel-params.conf already exists' 
+  ansible.builtin.stat:
+    path: '/etc/sysctl.d/10-kernel-params.conf'
+  register: sysctl_file
+  changed_when: false
+
+- name: Tune the kernel
+  ansible.builtin.sysctl:
+    name: '{{ item.key }}'
+    value: '{{ item.value }}'
+    state: present
+    sysctl_file: '/etc/sysctl.d/10-kernel-params.conf'
+    sysctl_set: true
+    reload: true
+  loop:
+    - { key: 'kernel.pid_max', value: '35768' }           # Maximum number of process IDs
+    - { key: 'kernel.shmmax', value: '268435456' }        # Maximum shared memory segment size
+    - { key: 'vm.swappiness', value: '10' }               # Minimize swapping to disk
+    - { key: 'vm.dirty_background_ratio', value: '5' }    # Percentage of system memory for 
+  when: not sysctl_file.stat.exists                       # background writeback

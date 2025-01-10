@@ -1,0 +1,17 @@
+---
+# path: roles/common/handlers/main.yml
+
+- name: restart systemd service
+  ansible.builtin.service:
+    name: "{{ service_name }}"
+    state: restarted
+    daemon_reload: true
+    enabled: true
+  register: service_result
+  ignore_errors: false    
+
+- name: Check service status
+  ansible.builtin.fail:
+    msg: "Failed to restart '{{ service_name }}' - system may be in inconsistent state"
+  when: service_result is failed
+  any_errors_fatal: true

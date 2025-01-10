@@ -1,4 +1,23 @@
 ---
 # path: inventories/group_vars_vars.yml
 
+###################
+# Build options
+###################
 audit_build_options: '--with-libcap-ng=yes --without-golang --without-python3 --with-io_uring --disable-zos-remote --sbindir=/usr/local/sbin'
+
+###################
+# Regional settings
+###################
+system_locale:
+  locale: LANG=en_US.UTF-8
+  console_keymap: us
+ 
+timezone: Europe/London
+kbd_url: 'https://mirrors.edge.kernel.org/pub/linux/utils/kbd/kbd-2.5.1.tar.gz'
+
+X11_keymap:
+  layout: us
+  model: hhk
+  variant: us 
+    #  option: 

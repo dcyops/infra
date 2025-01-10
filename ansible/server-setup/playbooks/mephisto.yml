@@ -5,7 +5,10 @@
   become: true
   vars_files:
     - ../inventories/mephisto/host_vars/vars.yml
-    - ../inventories/group_vars/main.yml
+    - ../inventories/group_vars/vars.yml
+  handlers:
+    - import_tasks: handlers/main.yml
   roles:
     - common
     - monitoring
+
