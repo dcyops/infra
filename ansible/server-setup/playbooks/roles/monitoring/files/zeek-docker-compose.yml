@@ -2,7 +2,7 @@
 # path: roles/monitoring/files/zeek-docker-compose.yml
 
 networks:
-  nginx-proxy:
+  nginx-proxy-manager:
     external: true
 
 #-----------ZEEK-SERVER-----------#
@@ -13,16 +13,16 @@ services:
     container_name: zeek-controller
     hostname: leviathan 
 
-    network_mode: 'host'
+    network_mode: host
     networks:
-      - nginx-proxy
+      - 'nginx-proxy-manager'
     volumes:
       - './data:/data'
       - './logs:/usr/local/zeek/logs'
       - '/etc/timezone:/etc/timezone:ro'
     environment:
       #      - INTERFACE=eth0
-      - ZEEKCTL_OPTIONS='--no-pin-cpu'
+      - 'ZEEKCTL_OPTIONS=--no-pin-cpu'
     cap_add:
       - 'NET_RAW'
       - 'NET_ADMIN'
