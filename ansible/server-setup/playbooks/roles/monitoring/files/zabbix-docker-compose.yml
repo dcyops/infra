@@ -1,0 +1,172 @@
+---
+# path: roles/monitoring/files/zabbix-docker-compose.yml
+
+networks:
+  nginx-proxy-manager:
+    external: true
+
+#-----------ZABBIX-SERVER--------------#
+services:
+  zabbix-server:
+    image: 'zabbix/zabbix-server-pgsql:alpine-7.0-latest'
+    restart: unless-stopped
+    container_name: 'zabbix-server'
+
+    environment:
+      DB_SERVER_HOST: 'zabbix-db'
+      POSTGRES_DB: '${POSTGRES_DATABASE}'
+      POSTGRES_USER: '${POSTGRES_USER}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      ZBX_ENABLE_SNMP_TRAPS: 'true'
+      PGID: 1000
+      PUID: 1000
+    volumes:
+     - '/etc/timezone:/etc/timezone:ro'
+    depends_on:
+      - 'zabbix-db'
+
+    expose:
+      - '10051:10051'
+    networks:
+      nginx-proxy-manager:
+        aliases:
+          - zabbix-server
+    deploy:
+      resources:
+        limits:
+          memory: '1G'
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10M'
+        max-file: '5'
+#--------------------------------------#
+
+#--------------ZABBIX-WEB--------------#
+  zabbix-web:
+    image: 'zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest'
+    restart: unless-stopped
+    container_name: 'zabbix-web'
+
+    environment:
+      DB_SERVER_HOST: 'zabbix-db'
+      POSTGRES_DB: '${POSTGRES_DATABASE}'
+      POSTGRES_USER: '${POSTGRES_USER}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      PHP_TZ: '${PHP_TZ}'
+      ZBX_SERVER_HOST: 'zabbix-server'
+      PGID: 1000
+      PUID: 1000
+    volumes:
+     - '/etc/timezone:/etc/timezone:ro'
+    depends_on:
+      - 'zabbix-server'
+
+    expose:
+      - '8080:8080'
+    networks:
+      nginx-proxy-manager:
+        aliases:
+          - zabbix-web
+
+    deploy:
+      resources:
+        limits:
+          memory: '256M'
+          cpus: '0.5'
+        reservations:
+          memory: '128M'
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: "5M"
+        max-file: '3'
+#--------------------------------------#
+
+#---------------ZABBIX-DB--------------#
+zabbix-db:
+    image: 'postgres:15-alpine'
+    restart: unless-stopped
+    container_name: 'zabbix-db'
+
+    environment:
+      POSTGRES_DB: '${POSTGRES_DATABASE}'
+      POSTGRES_USER: '${POSTGRES_USER}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      PGID: 1000
+      PUID: 1000
+    command:
+      - postgres
+      - '--max_connections=50'
+      - '--shared_buffers=256MB'
+      - '--work_mem=8MB'
+      - '--maintenance_work_mem=64MB'
+      - '--effective_cache_size=512MB'
+      - '--synchronous_commit=off'
+    volumes:
+      - './db/postgresql:/var/lib/postgresql/data'
+
+    networks:
+      nginx-proxy-manager:
+        aliases:
+          - zabbix-db
+
+    deploy:
+      resources:
+        limits:
+          memory: '1G'
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '5M'
+        max-file: '3'
+#--------------------------------------#
+
+#--------------ZABBIX-SNMP-------------#
+zabbix-snmptrap:
+  image: 'zabbix/zabbix-snmptraps:alpine-7.0-latest'
+  restart: unless-stopped
+  container_name: 'zabbix-snmptraps'
+
+  expose:
+    - '162:162/udp'
+  networks:
+    nginx-proxy-manager:
+      aliases:
+        - zabbix-snmptrap
+
+  environment:
+    ZBX_SERVER_HOST: 'zabbix-server'
+    PGID: 1000
+    PUID: 1000
+    
+  volumes:
+    - './snmptraps:/var/lib/zabbix/snmptraps:rw'
+    - './config/snmp/mibs:/var/lib/zabbix/mibs:ro'
+    - '/etc/timezone:/etc/timezone:ro'
+    - zabbix-snmptraps:
+        driver: local
+        restart: unless-stopped
+  deploy:
+    resources:
+      limits:
+        memory: '1G'
+        cpus: '1.0'
+      reservations:
+        memory: '512M'
+
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '50M'
+      max-file: '10'
+#--------------------------------------#

@@ -1,0 +1,39 @@
+---
+# path: roles/monitoring/files/zeek-docker-compose.yml
+
+networks:
+  nginx-proxy:
+    external: true
+
+#-----------ZEEK-SERVER-----------#
+services:
+  zeek-controller:
+    image: 'zeek/zeek:7.1'
+    restart: unless-stopped
+    container_name: zeek-controller
+    hostname: leviathan 
+
+    network_mode: 'host'
+    networks:
+      - nginx-proxy
+    volumes:
+      - './data:/data'
+      - './logs:/usr/local/zeek/logs'
+      - '/etc/timezone:/etc/timezone:ro'
+    environment:
+      #      - INTERFACE=eth0
+      - ZEEKCTL_OPTIONS='--no-pin-cpu'
+    cap_add:
+      - 'NET_RAW'
+      - 'NET_ADMIN'
+
+    mem_limit: '2G'
+    mem_reservation: '512M'
+    cpus: '1.0'
+
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100M'
+        max-file: '5'
+#---------------------------------#
