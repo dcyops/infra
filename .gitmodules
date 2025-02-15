@@ -1,0 +1,3 @@
+[submodule "ansible/server-setup/inventories"]
+	path = ansible/server-setup/inventories
+	url = git@github.com:dcyops/inventories.git
