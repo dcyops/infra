@@ -17,14 +17,14 @@
       when: executing_user.stdout == 'root'
       any_errors_fatal: true
 
-    - name: Create Go directories
+    - name: Create required directories
       ansible.builtin.file:
         path: '/home/{{ ansible_user }}/.local/{{ item }}'
         state: directory
         mode: '0755'
       loop:
         - 'bin'
-        - 'src/go'
+        - 'opt/go'
         - 'share/go'
 
     - name: Configure Go environment
@@ -70,3 +70,40 @@
         chdir: '/home/{{ target_user }}/.local/src/go/bin'
   become: true
   become_user: '{{ target_user }}'
+
+########################
+# Editor install
+# TODO: Consider adding a sandbox for nvim and its plugins
+########################
+- block:
+    - name: 'Verify executing user'
+      ansible.builtin.command: whoami
+      register: executing_user
+      become: true
+      become_user: '{{ target_user }'
+
+    - name: 'Check if running as non-root user'
+      ansible.builtin.fail:
+        msg: 'Task is running as root, expected non-root user'
+      when: executing_user.stdout == 'root'
+      any_errors_fatal: true
+
+    - name: Create required directories
+      ansible.builtin.file:
+        path: '/home/{{ ansible_user }}/.local/{{ item }}'
+        state: directory
+        mode: '0755'
+      loop:
+        - 'opt/nvim'
+
+    - name: 'Unarchive nvim to {{ nvim.root_dir }}'
+      ansible.builtin.unarchive:
+        src: '{{ nvim.url }}'
+        dest: '{{ nvim.root_dir }}'
+        remote_src: true
+        creates: '{{ nvim.root_dir }}'
+        mode: '0700'
+        # extra_opts:
+        #   - '--strip-components=1'
+  become: true
+  become_user: '{{ ansible_user }}'
